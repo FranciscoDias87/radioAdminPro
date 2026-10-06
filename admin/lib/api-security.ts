@@ -14,7 +14,7 @@ export function checkOrigin(request:Request){
   if(origin&&origin!==new URL(request.url).origin)throw new BusinessError("Origem da solicitação não autorizada.");
 }
 export function apiError(error:unknown){
-  console.error(error);
+  console.error('radioadmin.request_failed',{type:error instanceof Error?error.name:'UnknownError'});
   if(error instanceof z.ZodError||error instanceof SyntaxError)return Response.json({error:"Confira os campos e datas informados."},{status:400});
   if(error instanceof BusinessError)return Response.json({error:error.message},{status:error.message==="Autenticação necessária."?401:400});
   return Response.json({error:"Não foi possível concluir a operação. Tente novamente."},{status:503});

@@ -100,7 +100,8 @@ export async function workflowAction(request:Request,body:{action:string;contrac
   const result=await db.batch([
    db.prepare("UPDATE records SET data=? WHERE id=? AND data=? AND (SELECT data FROM records WHERE id=?)=?").bind(JSON.stringify(next),c.id,row.raw,v.id,vr.raw),
    db.prepare("UPDATE records SET data=? WHERE id=? AND data=? AND (SELECT data FROM records WHERE id=?)=?").bind(JSON.stringify(final),v.id,vr.raw,c.id,JSON.stringify(next)),
-   auditStatement(db,operator,"contract.finalize",c.id,c,{contract:next,versionId:v.id,finalHash:final.finalHash},true)
+   db.prepare("INSERT INTO records (id,kind,data) SELECT ?,'audit',? WHERE (SELECT data FROM records WHERE id=?)=?").bind(`audit:${crypto.randomUUID()}`,JSON.stringify({actorId:operator.id,actor:operator.label,action:'contract.finalize',recordId:c.id,date,before:c,after:{contract:next,versionId:v.id,finalHash:final.finalHash}}),v.id,JSON.stringify(final)),
+   db.prepare("UPDATE records SET data=json_set(data,'$.expiresAt',?) WHERE kind='invite' AND json_extract(data,'$.versionId')=? AND json_extract(data,'$.usedAt') IS NOT NULL AND json_extract(data,'$.revokedAt') IS NULL AND (SELECT data FROM records WHERE id=?)=?").bind(new Date(Date.now()+30*86400000).toISOString(),v.id,v.id,JSON.stringify(final))
   ]);if(!result[0].meta.changes)return Response.json({error:"Contrato alterado. Atualize antes de confirmar."},{status:409});return Response.json({ok:true});
  }
  if(body.action!=="submit"||c.stage!==0||c.status!=="Rascunho")throw new BusinessError("Ação não disponível para esta etapa.");

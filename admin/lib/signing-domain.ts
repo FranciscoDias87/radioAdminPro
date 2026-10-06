@@ -18,7 +18,7 @@ export const consentText="Li integralmente esta versão do contrato e concordo c
 export function checkInvite(c:Contract,v:ContractVersion,i:Invite,now=Date.now(),allowUsed=false){
  if(i.revokedAt||new Date(i.expiresAt).getTime()<=now)throw new BusinessError("Link expirado ou revogado. Solicite um novo link à OPEC.");
  if(i.usedAt&&!allowUsed)throw new BusinessError("Este link já foi utilizado.");
- if(c.workflowVersion!==v.number||["Cancelado","Encerrado"].includes(c.status)||["superseded","cancelled"].includes(v.state))throw new BusinessError("Esta versão não está disponível para assinatura.");
+ if(c.workflowVersion!==v.number||c.status==='Cancelado'||(c.status==='Encerrado'&&!(allowUsed&&i.usedAt&&v.state==='completed'))||["superseded","cancelled"].includes(v.state))throw new BusinessError("Esta versão não está disponível para assinatura.");
  if(!i.usedAt&&((i.role==="client"&&(c.stage!==2||v.state!=="client"))||(i.role==="speaker"&&(c.stage!==3||v.state!=="speaker"))))throw new BusinessError("Aguarde a assinatura anterior ou a conferência da OPEC.");
 }
 export async function checkVersion(v:ContractVersion){

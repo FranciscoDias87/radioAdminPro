@@ -8,7 +8,7 @@ const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(s => {
 }, "Data inválida");
 const id = z.string().min(1).max(100);
 const short = z.string().max(150);
-export const clientSchema = z.object({ id, name: short.min(2), document: z.string().max(50).default(""), contact: short.default(""), email: z.union([z.literal(""), z.string().email()]).default(""), phone: z.string().max(40).default("") });
+export const clientSchema = z.object({ id, name: short.min(2), document: z.string().max(50).default(""), contact: short.default(""), email: z.union([z.literal(""), z.string().email()]).default(""), phone: z.string().max(40).default(""), creatorId:z.string().default("") });
 export const speakerSchema = z.object({ id, name: short.min(2), email: z.union([z.literal(""), z.string().email()]).default(""), phone: z.string().max(40).default(""), active: z.boolean().default(true) });
 export const contractSchema = z.object({
   id, clientId: id, title: short.min(2), start: day, end: day,
@@ -71,6 +71,7 @@ export function recordReceipt(b:Billing,invoiceId:string,p:Payment):Billing {
   return {...b,invoices:b.invoices.map(i=>i.id===invoiceId?{...i,payments:[...i.payments,p]}:i)};
 }
 export function recordCommission(c:Contract,b:Billing,p:Payment):Billing {
+  if(c.stage!==5||!["Ativo","Encerrado"].includes(c.status))throw new BusinessError("Repasse permitido somente após homologação, para contratos ativos ou encerrados. Contratos cancelados exigem acerto administrativo.");
   if(!Number.isInteger(p.amountCents)||p.amountCents<=0||p.amountCents>commission(c,b).available)throw new BusinessError("Valor maior que a comissão disponível");
   return {...b,commissionPayments:[...b.commissionPayments,p]};
 }

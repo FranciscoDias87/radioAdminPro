@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-const base="http://127.0.0.1:5173";
+const base=process.env.RADIOADMIN_TEST_URL||"http://127.0.0.1:5173";
+assert.ok(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(base),'Teste permitido somente em servidor local');
 const prefix=`qa-${Date.now()}`;
 async function send(path,body){const r=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});return {status:r.status,body:await r.json()};}
 async function rows(){const r=await fetch(base+"/api/records");assert.equal(r.status,200);return r.json();}
@@ -28,7 +29,7 @@ test("Contrato, parcelas, recebimento parcial, comissão e controle de concorrê
  assert.equal(bill.invoices[0].payments[0].amountCents,2500);
  const repass={action:"commission",contractId:c.id,expected:JSON.stringify(bill),amountCents:751,date:"2026-10-06",method:"Pix",note:"Teste local"};
  assert.equal((await send("/api/actions",repass)).status,400);
- assert.equal((await send("/api/actions",{...repass,amountCents:750})).status,200);
+ assert.equal((await send("/api/actions",{...repass,amountCents:750})).status,400);
  const current=data.find(r=>r.kind==="contract"&&r.data.id===c.id).data;
  assert.equal((await send("/api/records",{kind:"contract",data:{...current,amount:101},previous:JSON.stringify(current)})).status,400);
  let raw=current;
@@ -40,9 +41,6 @@ test("Contrato, parcelas, recebimento parcial, comissão e controle de concorrê
  assert.equal((await send("/api/records",{kind:"contract",data:{...raw,status:"Cancelado",cancelReason:"Pedido do anunciante"},previous:JSON.stringify(raw)})).status,200);
  data=await rows();bill=data.find(r=>r.data.id===bill.id).data;
  const reverse={contractId:c.id,expected:JSON.stringify(bill),date:"2026-10-06",note:"Correção de lançamento"};
- assert.equal((await send("/api/actions",{...reverse,action:"reverseReceipt",paymentId:bill.invoices[0].payments[0].id})).status,400);
- assert.equal((await send("/api/actions",{...reverse,action:"reverseCommission",paymentId:bill.commissionPayments[0].id})).status,200);
- data=await rows();bill=data.find(r=>r.data.id===bill.id).data;
  assert.equal((await send("/api/actions",{...reverse,expected:JSON.stringify(bill),action:"reverseReceipt",paymentId:bill.invoices[0].payments[0].id})).status,200);
  data=await rows();bill=data.find(r=>r.data.id===bill.id).data;
  assert.equal((await send("/api/actions",{...action,expected:JSON.stringify(bill)})).status,200);
