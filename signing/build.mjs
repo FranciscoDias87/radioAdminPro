@@ -1,0 +1,10 @@
+import {mkdirSync,copyFileSync,writeFileSync,cpSync} from 'node:fs';
+mkdirSync('dist/server',{recursive:true});
+copyFileSync('worker.js','dist/server/index.js');
+copyFileSync('browser.js','dist/server/browser.js');
+mkdirSync('dist/client/pdfjs',{recursive:true});
+copyFileSync('node_modules/pdfjs-dist/build/pdf.min.mjs','dist/client/pdfjs/pdf.mjs');
+copyFileSync('node_modules/pdfjs-dist/build/pdf.worker.min.mjs','dist/client/pdfjs/pdf.worker.mjs');
+copyFileSync('node_modules/pdfjs-dist/LICENSE','dist/client/pdfjs/LICENSE');
+cpSync('node_modules/pdfjs-dist/standard_fonts','dist/client/pdfjs/standard_fonts',{recursive:true});
+writeFileSync('dist/server/wrangler.json',JSON.stringify({name:'radioadmin-signing',main:'index.js',compatibility_date:'2026-05-15',compatibility_flags:['nodejs_compat'],assets:{directory:'../client',binding:'ASSETS'}}));

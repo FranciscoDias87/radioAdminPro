@@ -1,0 +1,1 @@
+{"name":"radioadmin-signing","version":"1.0.0","private":true,"type":"module","scripts":{"build":"node build.mjs"},"dependencies":{"pdfjs-dist":"^6.4.299"}}

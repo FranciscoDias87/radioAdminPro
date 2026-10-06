@@ -1,0 +1,11 @@
+**/node_modules/
+**/dist/
+**/.wrangler/
+**/.sites-runtime/
+**/work/
+**/.env*
+**/.dev.vars*
+**/*.tsbuildinfo
+**/coverage/
+*.tar.gz
+*.zip
