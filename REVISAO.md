@@ -59,7 +59,10 @@ Nao houve assinatura real, envio real de WhatsApp ou alteracao de dados de produ
   projetos nesta verificacao. Isso nao garante ausencia de falhas desconhecidas.
 - Conferencia visual do painel, cadastro no celular e consulta de auditoria.
 
-CI em GitHub precisa concluir sua propria execucao. Testes locais nao comprovam
+CI em GitHub aprovado para o commit de implementacao
+`200fa95e265e7bd60f1ad7bdd249567ae8c3059d`, com os jobs `admin` e `signing`
+concluidos com sucesso: https://github.com/FranciscoDias87/radioAdminPro/actions/runs/37515523800
+Commits futuros precisam de sua propria verificacao. Testes nao comprovam
 entrega do WhatsApp nem disponibilidade permanente em producao.
 
 ## Fontes de seguranca
