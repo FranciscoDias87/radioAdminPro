@@ -10,5 +10,6 @@ export function exactAdvertiser(clients:Client[],query:string){
  const document=normalizeDocument(query);
  if(document.length!==11&&document.length!==14)return undefined;
  const matches=clients.filter(c=>normalizeDocument(c.document)===document);
- return matches.length===1?matches[0]:undefined;
+ const longerMatch=clients.some(c=>{const n=normalizeDocument(c.document);return n.length>document.length&&n.startsWith(document);});
+ return matches.length===1&&!longerMatch?matches[0]:undefined;
 }

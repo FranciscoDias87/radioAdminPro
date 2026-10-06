@@ -9,3 +9,8 @@ test('Busca por documento com ou sem máscara, parcial e nome sem acento',()=>{
 test('Seleção automática exige documento completo e resultado único na carteira',()=>{
  assert.equal(exactAdvertiser(clients,'529982'),undefined);assert.equal(exactAdvertiser([],clients[0].document),undefined);assert.equal(exactAdvertiser([...clients,{...clients[0],id:'duplicate'}],clients[0].document),undefined);assert.equal(exactAdvertiser(clients,'52998224725').id,'pf');
 });
+test('Filtro muda a cada caractere e não mantém seleção de uma busca anterior',()=>{
+ for(let length=1;length<=11;length++)assert.equal(searchAdvertisers(clients,'52998224725'.slice(0,length))[0].id,'pf');
+ assert.equal(exactAdvertiser(clients,'52998224725').id,'pf');assert.equal(exactAdvertiser(clients,'5299822472'),undefined);assert.equal(exactAdvertiser(clients,''),undefined);assert.equal(searchAdvertisers(clients,'999').length,0);
+ const prefix=[...clients,{id:'prefix',name:'Empresa com prefixo igual',document:'52998224725001'}];assert.equal(exactAdvertiser(prefix,'52998224725'),undefined);assert.equal(searchAdvertisers(prefix,'52998224725').length,2);
+});
