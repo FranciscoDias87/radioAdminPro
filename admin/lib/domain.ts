@@ -8,7 +8,14 @@ const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(s => {
 }, "Data inválida");
 const id = z.string().min(1).max(100);
 const short = z.string().max(150);
-export const clientSchema = z.object({ id, name: short.min(2), document: z.string().max(50).default(""), contact: short.default(""), email: z.union([z.literal(""), z.string().email()]).default(""), phone: z.string().max(40).default(""), creatorId:z.string().default(""), personType:z.enum(["PF","PJ"]).optional(), representativeCpf:z.string().max(20).optional(), representativePhone:z.string().max(40).optional(), address:z.string().max(500).optional() });
+export const brazilStates=["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"] as const;
+export const addressSchema=z.object({
+ postalCode:z.string().trim().transform(v=>v.replace(/-/g,"")).pipe(z.string().regex(/^\d{8}$/, "CEP inválido")),
+ street:z.string().trim().min(2).max(150),number:z.string().trim().min(1).max(20),
+ complement:z.string().trim().max(150).default(""),neighborhood:z.string().trim().min(2).max(100),
+ city:z.string().trim().min(2).max(100),state:z.enum(brazilStates)
+});
+export const clientSchema = z.object({ id, name: short.min(2), document: z.string().max(50).default(""), contact: short.default(""), email: z.union([z.literal(""), z.string().email()]).default(""), phone: z.string().max(40).default(""), creatorId:z.string().default(""), personType:z.enum(["PF","PJ"]).optional(), representativeCpf:z.string().max(20).optional(), representativePhone:z.string().max(40).optional(), address:z.string().max(500).optional(),addressFields:addressSchema.optional() });
 const templateContent={name:short.trim().min(2),clauses:z.string().trim().min(20).max(30000),clientSignatureLabel:short.trim().min(2),speakerSignatureLabel:short.trim().min(2),opecSignatureLabel:short.trim().min(2)};
 export const templateSchema=z.object({id,...templateContent,active:z.boolean().default(true),version:z.number().int().positive().default(1),updatedAt:z.string().optional()});
 export const templateSnapshotSchema=z.object({id,...templateContent,version:z.number().int().positive()});

@@ -3,6 +3,7 @@ import {useId,useState} from "react";
 import {RadioGroup,RadioGroupItem} from "@/components/ui/radio-group";
 import type {Client} from "@/lib/domain";
 import {personType} from "@/lib/client-identity";
+import {AddressFields} from "@/components/address-fields";
 
 export function AdvertiserForm({data}:{data?:Client}){
  const prefix=useId(),[type,setType]=useState<string>(data?personType(data):"PJ");
@@ -13,6 +14,6 @@ export function AdvertiserForm({data}:{data?:Client}){
   <div className="pro-form-grid"><label>WhatsApp do anunciante<input name="phone" type="tel" defaultValue={data?.phone} maxLength={40} required autoComplete="tel" placeholder="(00) 00000-0000"/></label><label>E-mail<input name="email" type="email" defaultValue={data?.email} maxLength={150} autoComplete="email"/></label></div>
   <label>{type==="PJ"?"Nome completo do representante":"Responsável / contato comercial"}<input name="contact" defaultValue={data?.contact||data?.name} minLength={2} maxLength={150} required autoComplete="name"/></label>
   {type==="PJ"&&<div className="pro-form-grid"><label>CPF do representante<input name="representativeCpf" defaultValue={data?.representativeCpf} inputMode="numeric" maxLength={20} required/></label><label>WhatsApp do representante<input name="representativePhone" type="tel" defaultValue={data?.representativePhone||data?.phone} maxLength={40} required placeholder="(00) 00000-0000"/></label></div>}
-  <label>{type==="PJ"?"Endereço completo da empresa":"Endereço completo"}<textarea name="address" defaultValue={data?.address} minLength={8} maxLength={500} rows={3} required placeholder="Logradouro, número, complemento, bairro, cidade, UF e CEP" autoComplete="street-address"/></label>
+  <AddressFields data={data}/>
  </>;
 }

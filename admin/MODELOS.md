@@ -3,6 +3,12 @@
 O cadastro identifica PF ou PJ. Novos cadastros e edicoes exigem documento
 valido, nome, responsavel, WhatsApp com DDD e endereco completo. E-mail e
 opcional. Para PJ, CPF e WhatsApp do representante tambem sao obrigatorios.
+O endereco e salvo em campos independentes: CEP, logradouro, numero,
+complemento, bairro, cidade e UF. Complemento e opcional; numero aceita S/N.
+CEP e normalizado para oito digitos e UF aceita os estados brasileiros.
+O endereco em texto de cadastros anteriores e preservado como referencia;
+novas edicoes exigem preencher os campos separados, sem divisao automatica.
+PDFs e listas apresentam o endereco composto a partir desses campos.
 CPF e CNPJ sao validados por digitos verificadores; CNPJ numerico e
 alfanumerico sao aceitos. Isso nao consulta a situacao cadastral na Receita.
 

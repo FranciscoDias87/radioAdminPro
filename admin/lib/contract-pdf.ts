@@ -1,7 +1,7 @@
 import {PDFDocument,StandardFonts,rgb} from "pdf-lib";
 import {money} from "./domain.ts";
 import type {ContractVersion} from "./signing-domain";
-import {clientSigner,personType} from "./client-identity.ts";
+import {clientSigner,personType,formatAddress} from "./client-identity.ts";
 export const toBase64=(bytes:Uint8Array)=>{let s="";for(const byte of bytes)s+=String.fromCharCode(byte);return btoa(s);};
 export const fromBase64=(value:string)=>Uint8Array.from(atob(value),c=>c.charCodeAt(0));
 export async function contractPdf(v:Pick<ContractVersion,"payload"|"number"|"createdAt"|"hash">){
@@ -17,7 +17,7 @@ export async function contractPdf(v:Pick<ContractVersion,"payload"|"number"|"cre
  const {contract:c,client,speaker,station,installments}=v.payload;
  line(station.name,18,true);line(`CNPJ: ${station.document} | ${station.address}`);
  line("CONTRATO DE VEICULAÇÃO PUBLICITÁRIA",14,true);line(`Referência: ${c.id} | Versão: ${v.number}`);line(`Emissão da versão: ${v.createdAt}`);
- line("PARTES E RESPONSÁVEIS",12,true);line(`Anunciante (${personType(client)}): ${client.name} | CPF/CNPJ: ${client.document}`);line(`Endereço do anunciante: ${client.address||"Não informado"}`);line(`WhatsApp: ${client.phone} | E-mail: ${client.email||"Não informado"}`);line(`Responsável pelo anunciante: ${client.contact}`);
+ line("PARTES E RESPONSÁVEIS",12,true);line(`Anunciante (${personType(client)}): ${client.name} | CPF/CNPJ: ${client.document}`);line(`Endereço do anunciante: ${formatAddress(client)||"Não informado"}`);line(`WhatsApp: ${client.phone} | E-mail: ${client.email||"Não informado"}`);line(`Responsável pelo anunciante: ${client.contact}`);
  const signer=clientSigner(client);if(personType(client)==="PJ")line(`Representante: ${signer.name} | CPF: ${signer.document} | Telefone: ${signer.phone}`);
  line(`Locutor/agente: ${speaker.name}`);line(`Gestor: ${c.manager}`);
  line("CONDIÇÕES COMERCIAIS",12,true);line(`Campanha: ${c.title}`);line(`Vigência: ${c.start} a ${c.end} | Setor: ${c.sector}`);line(`Programa/faixa: ${c.program}`);line(`Inserções: ${c.spots} | Duração por inserção: ${c.duration} segundos`);line(`Valor contratado: ${money(Math.round(c.amount*100))}`);line(`Comissão do locutor/agente: ${c.commissionRate}% | Liberação proporcional aos recebimentos registrados.`);

@@ -1,12 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validCpf,validCnpj} from './identifiers.ts';
-import {clientSchema,contractSchema,validateContractEdit} from './domain.ts';
-import {clientSigner,personType,validateClientIdentity} from './client-identity.ts';
+import {clientSchema,addressSchema,contractSchema,validateContractEdit} from './domain.ts';
+import {clientSigner,personType,validateClientIdentity,formatAddress} from './client-identity.ts';
 import {contractPdf} from './contract-pdf.ts';
 import {PDFDocument} from 'pdf-lib';
 
 const company=clientSchema.parse({id:'client',name:'Empresa de teste',personType:'PJ',document:'11.222.333/0001-81',contact:'Representante',representativeCpf:'529.982.247-25',representativePhone:'11999991234',phone:'11988888888',email:'',address:'Rua de teste, 10, Centro, Água Branca - PI'});
+test('Endereço estruturado preserva campos, CEP e texto legado',()=>{
+ const fields={postalCode:'64460-000',street:' Rua de teste ',number:'S/N',complement:'Sala 2',neighborhood:'Centro',city:'Água Branca',state:'PI'};
+ const addressFields=addressSchema.parse(fields);assert.equal(addressFields.postalCode,'64460000');assert.equal(addressFields.street,'Rua de teste');assert.equal(addressFields.number,'S/N');
+ assert.equal(formatAddress({addressFields}),'Rua de teste, S/N, Sala 2, Centro, Água Branca/PI, CEP 64460-000');assert.equal(formatAddress(company),company.address);
+ assert.doesNotThrow(()=>validateClientIdentity({...company,address:undefined,addressFields}));
+ for(const invalid of [{postalCode:'123'},{state:'XX'},{street:''},{number:''},{neighborhood:''},{city:''}])assert.throws(()=>addressSchema.parse({...fields,...invalid}));
+});
 test('PF e PJ: documentos, representante e endereço obrigatórios',()=>{
  assert.ok(validCpf('52998224725'));assert.ok(!validCpf('CPF52998224725'));assert.ok(validCnpj('11.222.333/0001-81'));assert.ok(validCnpj('12.ABC.345/01DE-35'));assert.ok(!validCnpj('11.222.333/0001-82'));assert.ok(!validCnpj('00.000.000/0000-00'));
  assert.doesNotThrow(()=>validateClientIdentity(company));assert.equal(clientSigner(company).phone,company.representativePhone);assert.equal(clientSigner(company).document,company.representativeCpf);

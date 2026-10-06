@@ -20,6 +20,8 @@ export async function POST(request:Request){
   if(existing&&body.previous!==existing.data)return Response.json({error:"Este registro foi alterado. Atualize a página e tente novamente."},{status:409});
   if(body.kind==='client'){
    if(!data.personType)throw new BusinessError('Selecione pessoa física ou jurídica.');
+   if(!data.addressFields)throw new BusinessError('Preencha CEP, logradouro, número, bairro, cidade e UF nos campos de endereço.');
+   data.address=previous?.address;
    if(data.personType==='PF'){data.representativeCpf='';data.representativePhone='';}
    validateClientIdentity(data);
    data.creatorId=previous?.creatorId||(!previous?actor.id:'');
