@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./commercial.css";
 import "./brand.css";
+import "./mobile.css";
 
 export const metadata: Metadata = {
   title: "Meio Norte FM | radioAdmin Pro",
