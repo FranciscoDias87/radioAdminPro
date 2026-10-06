@@ -1,7 +1,8 @@
 "use client";
 import {useEffect,useState} from "react";
 import {Radio,LayoutDashboard,FileText,Users,Wallet,Plus,Search,Download,Check,Pencil,Percent,Receipt,Mic,RefreshCw,Sun,Moon,Undo2,MessageCircle,Printer,Settings,ChevronRight,Activity} from "lucide-react";
-import {SidebarProvider,Sidebar,SidebarHeader,SidebarContent,SidebarFooter,SidebarMenu,SidebarMenuItem,SidebarMenuButton,SidebarTrigger} from "@/components/ui/sidebar";
+import {SidebarProvider,SidebarHeader,SidebarContent,SidebarFooter,SidebarMenu,SidebarMenuItem,SidebarMenuButton,SidebarTrigger} from "@/components/ui/sidebar";
+import {RadioSidebar as Sidebar} from "@/components/radio-sidebar";
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from "@/components/ui/dialog";
 import {Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription} from "@/components/ui/sheet";
 import {Tabs,TabsList,TabsTrigger,TabsContent} from "@/components/ui/tabs";

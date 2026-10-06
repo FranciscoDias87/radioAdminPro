@@ -1,0 +1,13 @@
+@media(min-width:768px){
+ .radio-pro [data-slot=sidebar][data-collapsible=icon]{--sidebar-width-icon:64px}
+ .radio-pro [data-collapsible=icon] .station-brand{justify-content:center;padding:12px 0;gap:0}
+ .radio-pro [data-collapsible=icon] .station-brand img{width:40px;height:40px}
+ .radio-pro [data-collapsible=icon] :is(.station-brand>div,.pro-station,.nav-label,.nav-count,.pro-account>div){display:none}
+ .radio-pro [data-collapsible=icon] .pro-menu{padding:0;align-items:center;gap:4px}
+ .radio-pro [data-collapsible=icon] .nav-group+.nav-group{border-top:1px solid var(--pro-line);padding-top:10px;margin-top:6px}
+ .radio-pro [data-collapsible=icon] [data-slot=sidebar-menu-button]>span{display:none}
+ .radio-pro [data-collapsible=icon] [data-slot=sidebar-menu-button]{justify-content:center}
+ .radio-pro [data-collapsible=icon] [data-slot=sidebar-menu-button]>svg{width:20px;height:20px}
+ .radio-pro [data-collapsible=icon] [data-slot=sidebar-content]{overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
+ .radio-pro [data-collapsible=icon] .pro-account{justify-content:center;padding:12px 0;gap:0}
+}
