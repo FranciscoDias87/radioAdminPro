@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./commercial.css";
+import "./brand.css";
 
 export const metadata: Metadata = {
-  title: "radioAdmin Pro | Gestão comercial",
-  description: "Administração comercial de emissoras de rádio",
+  title: "Meio Norte FM | radioAdmin Pro",
+  description: "Gestão comercial da Meio Norte FM 89,1, Água Branca",
   other: {
     "codex-preview": "development",
   },
