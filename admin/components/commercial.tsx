@@ -19,6 +19,7 @@ import {NavigationButton} from "@/components/navigation-button";
 import type {ReportData} from "@/lib/report-pdf";
 import type {Operator} from "@/lib/operators";
 import {AdvertiserForm} from "@/components/advertiser-form";
+import {AdvertiserPicker} from "@/components/advertiser-picker";
 import {ContractTemplates,ContractTemplateChoice} from "@/components/contract-templates";
 import {personType,formatAddress} from "@/lib/client-identity";
 import type {ContractTemplate} from "@/lib/domain";
@@ -70,7 +71,7 @@ export default function Commercial(){
  function open(kind:string,data?:any,extra:any={}){if(!demo&&((["receipt","commission","reverseReceipt","reverseCommission","billing","expense"].includes(kind)&&!canFinance)||(["station","speaker"].includes(kind)&&operator?.role!=="admin")||(["contract","client"].includes(kind)&&!canCommercial))){toast.error("Seu perfil não permite esta operação.");return}if(kind==='commission'&&(extra.contract?.stage!==5||!['Ativo','Encerrado'].includes(extra.contract?.status))){toast.error('Repasse disponível somente após homologação. Contratos cancelados exigem acerto administrativo.');return}if(kind==='client'&&data&&operator?.role==='agent'&&(data.creatorId!==operator.id||contracts.some(c=>c.clientId===data.id&&c.stage>0))){toast.error('Solicite a alteração deste anunciante à OPEC.');return}if(demo){toast.info("Volte à sua carteira para cadastrar ou alterar dados.");return}setModal({kind,data,previous:data?raw(kind,data.id):undefined,...extra})}
  async function send(url:string,payload:any){if(demo||busy)return false;setBusy(true);try{const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const result:any=await r.json();if(!r.ok)throw Error(result.error||"Não foi possível salvar");const loaded=await load();toast.success(loaded?"Registro salvo":"Registro salvo. Atualize para consultar os dados.");return true}catch(e:any){toast.error(e.message);return false}finally{setBusy(false)}}
  async function action(action:string,c:Contract,extra:any={}){const target=action==="advance"||action==="delivery"||action==="billing"?raw("contract",c.id):raw("billing",`billing:${c.id}`)||"";return send("/api/actions",{action,contractId:c.id,expected:target,...extra})}
- async function submit(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(!modal)return;const f:any=Object.fromEntries(new FormData(e.currentTarget));if(modal.kind==="client")f.addressFields={postalCode:f.postalCode,street:f.street,number:f.number,complement:f.complement,neighborhood:f.neighborhood,city:f.city,state:f.state};let ok=false;
+ async function submit(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(!modal)return;const f:any=Object.fromEntries(new FormData(e.currentTarget));if(modal.kind==="contract"&&!f.clientId){toast.error("Selecione o anunciante pelo CPF, CNPJ ou nome.");return;}if(modal.kind==="client")f.addressFields={postalCode:f.postalCode,street:f.street,number:f.number,complement:f.complement,neighborhood:f.neighborhood,city:f.city,state:f.state};let ok=false;
   if(modal.kind==="receipt"||modal.kind==="commission")ok=await action(modal.kind,modal.contract!,{invoiceId:modal.invoice?.id,amountCents:cents(Number(f.amount)),date:f.date,method:f.method,note:f.note});
   else if(modal.kind==="reverseReceipt"||modal.kind==="reverseCommission")ok=await action(modal.kind,modal.contract!,{paymentId:modal.payment!.id,date:f.date,note:f.note});
   else if(modal.kind==="billing")ok=await action("billing",modal.contract!,{count:Number(f.count),first:f.first});
@@ -142,7 +143,7 @@ function ContractTable({title,data,clientName,speakerName,onDetail}:any){return 
 function ContractForm({data,clients,speakers,billed,agentId,templates}:any){
  const locked=(data?.stage||0)>=1||["Cancelado","Encerrado"].includes(data?.status);
  return <>
-  <FormChoice label="Anunciante" name="clientId" defaultValue={data?.clientId} disabled={billed||locked} options={clients.map((c:Client)=>({value:c.id,label:c.name}))}/>
+  <AdvertiserPicker clients={clients} defaultValue={data?.clientId} disabled={billed||locked}/>
   {!clients.length&&<p className="pro-error">Cadastre um anunciante primeiro.</p>}
   <Field label="Campanha" name="title" readOnly={locked} defaultValue={data?.title} required/>
   <ContractTemplateChoice data={data} templates={templates} locked={locked}/>
