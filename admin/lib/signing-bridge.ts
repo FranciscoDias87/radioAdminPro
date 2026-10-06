@@ -5,6 +5,7 @@ import {workflowDb,stored,contractRow,newInvite,notifyInvite} from "./workflow-s
 import {sha256,hmac,secureEqual} from "./signing-crypto";
 import {checkInvite,checkVersion,addSignature,validCpf,consentText,type Invite,type ContractVersion,type Evidence} from "./signing-domain";
 import {sendSigningMessage,signingSettings,whatsappReady} from "./whatsapp-signing";
+import {clientSigner} from "./client-identity";
 const input=z.object({op:z.enum(["view","otp","sign","document"]),token:z.string().regex(/^[a-f0-9]{64}$/),name:z.string().trim().min(3).max(150).optional(),document:z.string().max(20).optional(),code:z.string().regex(/^\d{6}$/).optional(),consent:z.boolean().optional(),versionHash:z.string().optional(),documentHash:z.string().optional(),ip:z.string().max(100).default(""),userAgent:z.string().max(1000).default("")});
 export async function handleSigningBridge(request:Request){
  const secret=signingSettings().SIGNING_BRIDGE_SECRET;if(!secret)throw new BusinessError("Assinatura ainda não configurada.");
@@ -44,8 +45,12 @@ export async function handleSigningBridge(request:Request){
  }
  if(!body.name||!body.document||!validCpf(body.document)||!body.code||!body.consent)throw new BusinessError("Informe seu nome, CPF válido, código e concordância.");
  if(body.versionHash!==v.hash||body.documentHash!==v.documentHash)throw new BusinessError("O documento foi atualizado. Confira novamente antes de assinar.");
- const registeredCpf=i.role==="client"?v.payload.client.document.replace(/\D/g,""):"";
+ const registeredCpf=i.role==="client"?clientSigner(v.payload.client).document.replace(/\D/g,""):"";
  if(registeredCpf.length===11&&body.document.replace(/\D/g,"")!==registeredCpf)throw new BusinessError("O CPF informado não corresponde à parte contratante.");
+ if(i.role==='client'&&v.payload.client.personType){
+  const normalizeName=(value:string)=>value.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').trim().replace(/\s+/g,' ').toLowerCase();
+  if(normalizeName(body.name)!==normalizeName(clientSigner(v.payload.client).name))throw new BusinessError('Informe o nome completo do signatário cadastrado. Solicite correção à OPEC se necessário.');
+ }
  if(!i.challengeHash||!i.challengeExpiresAt||new Date(i.challengeExpiresAt).getTime()<=Date.now())throw new BusinessError("Código expirado. Solicite um novo código.");
  // Reserve the attempt before comparing the code, including concurrent requests.
  const attempted={...i,attempts:i.attempts+1};

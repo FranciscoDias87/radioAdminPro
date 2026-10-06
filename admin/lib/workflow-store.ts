@@ -6,13 +6,14 @@ import {randomToken,sha256,encryptToken,decryptToken} from "./signing-crypto";
 import {versionPayload,phoneNumber,canFinalize,checkVersion,type ContractVersion,type Invite,type SignerRole} from "./signing-domain";
 import {contractPdf,finalContractPdf,toBase64} from "./contract-pdf";
 import {sendSigningMessage,signingSettings,whatsappReady} from "./whatsapp-signing";
+import {clientSigner} from "./client-identity";
 export function workflowDb(){if(!env.DB)throw Error("Banco indisponível");return env.DB;}
 export async function stored(id:string,kind?:string){const r:any=await workflowDb().prepare(`SELECT kind,data FROM records WHERE id=?${kind?" AND kind=?":""}`).bind(...(kind?[id,kind]:[id])).first();return r?{raw:r.data as string,data:JSON.parse(r.data)}:null;}
 export async function contractRow(id:string,operator?:Operator){const row=await stored(id,"contract");if(!row)throw new BusinessError("Contrato não encontrado.");const c=contractSchema.parse(row.data);if(operator)checkContractAccess(operator,c);return {...row,contract:c};}
 export async function newInvite(v:ContractVersion,role:SignerRole):Promise<Invite>{
  const secret=signingSettings().SIGNING_BRIDGE_SECRET;if(!secret)throw new BusinessError("Página de assinatura ainda não conectada.");
- const token=randomToken(),tokenHash=await sha256(token),party=role==="client"?v.payload.client:v.payload.speaker;
- return {id:`invite:${tokenHash}`,tokenHash,encryptedToken:await encryptToken(secret,token),contractId:v.contractId,versionId:v.id,role,phone:phoneNumber(party.phone),name:role==="client"?v.payload.client.contact:party.name,expiresAt:new Date(Date.now()+72*3600000).toISOString(),notification:"pending",attempts:0,sends:0};
+ const token=randomToken(),tokenHash=await sha256(token),party=role==="client"?clientSigner(v.payload.client):v.payload.speaker;
+ return {id:`invite:${tokenHash}`,tokenHash,encryptedToken:await encryptToken(secret,token),contractId:v.contractId,versionId:v.id,role,phone:phoneNumber(party.phone),name:party.name,expiresAt:new Date(Date.now()+72*3600000).toISOString(),notification:"pending",attempts:0,sends:0};
 }
 export async function notifyInvite(id:string){
  const row=await stored(id,"invite");if(!row)return;

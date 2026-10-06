@@ -8,7 +8,10 @@ const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(s => {
 }, "Data inválida");
 const id = z.string().min(1).max(100);
 const short = z.string().max(150);
-export const clientSchema = z.object({ id, name: short.min(2), document: z.string().max(50).default(""), contact: short.default(""), email: z.union([z.literal(""), z.string().email()]).default(""), phone: z.string().max(40).default(""), creatorId:z.string().default("") });
+export const clientSchema = z.object({ id, name: short.min(2), document: z.string().max(50).default(""), contact: short.default(""), email: z.union([z.literal(""), z.string().email()]).default(""), phone: z.string().max(40).default(""), creatorId:z.string().default(""), personType:z.enum(["PF","PJ"]).optional(), representativeCpf:z.string().max(20).optional(), representativePhone:z.string().max(40).optional(), address:z.string().max(500).optional() });
+const templateContent={name:short.trim().min(2),clauses:z.string().trim().min(20).max(30000),clientSignatureLabel:short.trim().min(2),speakerSignatureLabel:short.trim().min(2),opecSignatureLabel:short.trim().min(2)};
+export const templateSchema=z.object({id,...templateContent,active:z.boolean().default(true),version:z.number().int().positive().default(1),updatedAt:z.string().optional()});
+export const templateSnapshotSchema=z.object({id,...templateContent,version:z.number().int().positive()});
 export const speakerSchema = z.object({ id, name: short.min(2), email: z.union([z.literal(""), z.string().email()]).default(""), phone: z.string().max(40).default(""), active: z.boolean().default(true) });
 export const contractSchema = z.object({
   id, clientId: id, title: short.min(2), start: day, end: day,
@@ -23,11 +26,13 @@ export const contractSchema = z.object({
   cancelReason: z.string().max(1000).default(""),
   creatorId:z.string().default(""),
   workflowVersion:z.number().int().nonnegative().default(0),
+  template:templateSnapshotSchema.optional(),
   snapshot: z.object({client:clientSchema,station:stationSchemaForSnapshot(),speakerName:short,capturedAt:z.string()}).optional()
 }).refine(c => c.end >= c.start && c.delivered <= c.spots, "Período ou inserções inválidos");
 export const expenseSchema = z.object({id, title:short.min(2), date:day, amountCents:z.number().int().positive().max(1000000000), category:short.min(1), notes:z.string().max(1000).default("")});
 export const stationSchema = z.object({id:z.literal("station"), name:short.min(2), dial:short.default(""), document:short.default(""), address:z.string().max(500).default(""), email:short.default(""), phone:short.default("")});
 export type Client = z.infer<typeof clientSchema>;
+export type ContractTemplate = z.infer<typeof templateSchema>;
 export type Speaker = z.infer<typeof speakerSchema>;
 export type Contract = z.infer<typeof contractSchema>;
 export type Expense = z.infer<typeof expenseSchema>;
@@ -86,6 +91,7 @@ export function validateContractEdit(previous:Contract,next:Contract){
   }
   const fields=["clientId","title","amount","speakerId","commissionRate","start","end","spots","duration","program","sector","manager","notes"] as const;
   if((previous.stage>=1||["Cancelado","Encerrado"].includes(previous.status))&&fields.some(k=>previous[k]!==next[k]))throw new BusinessError("Condições preservadas enquanto o contrato está em conferência ou assinatura. Solicite devolução à OPEC antes de editar.");
+  if((previous.stage>=1||["Cancelado","Encerrado"].includes(previous.status))&&JSON.stringify(previous.template)!==JSON.stringify(next.template))throw new BusinessError("O modelo e suas cláusulas estão preservados nesta etapa do contrato.");
 }
 export function reversePayment(c:Contract,b:Billing,kind:"receipt"|"commission",paymentId:string,p:Payment):Billing{
   if(p.note.trim().length<5)throw new BusinessError("Informe o motivo do estorno (mínimo de 5 caracteres).");

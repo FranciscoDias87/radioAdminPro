@@ -1,16 +1,17 @@
 import { env } from "cloudflare:workers";
 import {z} from "zod";
-import {clientSchema,speakerSchema,contractSchema,expenseSchema,stationSchema,makeBilling,validateContractEdit,BusinessError} from "@/lib/domain";
+import {clientSchema,speakerSchema,contractSchema,expenseSchema,stationSchema,templateSchema,templateSnapshotSchema,makeBilling,validateContractEdit,BusinessError} from "@/lib/domain";
+import {validateClientIdentity} from "@/lib/client-identity";
 import {actorOf,checkOrigin,apiError,auditStatement} from "@/lib/api-security";
 import {operatorOf,checkContractAccess} from "@/lib/operators";
 function db(){if(!env.DB)throw Error("Banco indisponível");return env.DB;}
-export async function GET(request:Request){try{const actor=await operatorOf(request);const result=await db().prepare("SELECT kind, data FROM records WHERE kind IN ('client','speaker','contract','billing','expense','station') ORDER BY id").all();let rows=result.results.map((r:any)=>({kind:r.kind,data:JSON.parse(r.data)}));if(actor.role==='agent'){const own=rows.filter(r=>r.kind==='contract'&&r.data.creatorId===actor.id);const ids=new Set(own.map(r=>r.data.id)),clients=new Set(own.map(r=>r.data.clientId));rows=rows.filter(r=>r.kind==='contract'?ids.has(r.data.id):r.kind==='billing'?ids.has(r.data.contractId):r.kind==='client'?r.data.creatorId===actor.id||clients.has(r.data.id):r.kind==='speaker'?r.data.id===actor.speakerId:r.kind==='station');}else if(actor.role==='opec')rows=rows.filter(r=>r.kind!=='expense');return Response.json(rows,{headers:{"Cache-Control":"no-store"}});}catch(e){return apiError(e);}}
+export async function GET(request:Request){try{const actor=await operatorOf(request);const result=await db().prepare("SELECT kind, data FROM records WHERE kind IN ('client','speaker','contract','billing','expense','station','template') ORDER BY id").all();let rows=result.results.map((r:any)=>({kind:r.kind,data:JSON.parse(r.data)}));if(actor.role==='agent'){const own=rows.filter(r=>r.kind==='contract'&&r.data.creatorId===actor.id);const ids=new Set(own.map(r=>r.data.id)),clients=new Set(own.map(r=>r.data.clientId));rows=rows.filter(r=>r.kind==='contract'?ids.has(r.data.id):r.kind==='billing'?ids.has(r.data.contractId):r.kind==='client'?r.data.creatorId===actor.id||clients.has(r.data.id):r.kind==='speaker'?r.data.id===actor.speakerId:r.kind==='station'||(r.kind==='template'&&r.data.active));}else if(actor.role==='opec')rows=rows.filter(r=>r.kind!=='expense');return Response.json(rows,{headers:{"Cache-Control":"no-store"}});}catch(e){return apiError(e);}}
 export async function POST(request:Request){
  try{
   checkOrigin(request);
   const body:any=await request.json();
-  const actor=await operatorOf(request,body.kind==='expense'?['admin','finance']:body.kind==='station'||body.kind==='speaker'?['admin']:['admin','opec','agent']);
-  const schemas:any={client:clientSchema,speaker:speakerSchema,contract:contractSchema,expense:expenseSchema,station:stationSchema};
+  const actor=await operatorOf(request,body.kind==='expense'?['admin','finance']:body.kind==='station'||body.kind==='speaker'?['admin']:body.kind==='template'?['admin','opec']:['admin','opec','agent']);
+  const schemas:any={client:clientSchema,speaker:speakerSchema,contract:contractSchema,expense:expenseSchema,station:stationSchema,template:templateSchema};
   const schema=Object.hasOwn(schemas,body?.kind)?schemas[body.kind]:null;if(!schema)return Response.json({error:"Tipo inválido"},{status:400});
   const data=schema.parse(body.data);
   const existing:any=await db().prepare("SELECT kind,data FROM records WHERE id=?").bind(data.id).first();
@@ -18,6 +19,9 @@ export async function POST(request:Request){
   const previous=existing?JSON.parse(existing.data):null;
   if(existing&&body.previous!==existing.data)return Response.json({error:"Este registro foi alterado. Atualize a página e tente novamente."},{status:409});
   if(body.kind==='client'){
+   if(!data.personType)throw new BusinessError('Selecione pessoa física ou jurídica.');
+   if(data.personType==='PF'){data.representativeCpf='';data.representativePhone='';}
+   validateClientIdentity(data);
    data.creatorId=previous?.creatorId||(!previous?actor.id:'');
    if(actor.role==='agent'&&previous){
     if(previous.creatorId!==actor.id)throw new BusinessError('Solicite à OPEC a alteração deste anunciante.');
@@ -25,6 +29,7 @@ export async function POST(request:Request){
     if(linked)throw new BusinessError('Anunciante compartilhado ou em conferência. Solicite alteração à OPEC.');
    }
   }
+  if(body.kind==='template'){data.version=(previous?.version||0)+1;data.updatedAt=new Date().toISOString();}
   if(body.kind==="contract"){
    if(previous)checkContractAccess(actor,contractSchema.parse(previous));
    if(actor.role==='agent'&&data.speakerId!==actor.speakerId)throw new BusinessError('O agente deve vincular seu próprio cadastro de locutor.');
@@ -37,6 +42,19 @@ export async function POST(request:Request){
     if(!assigned)throw new BusinessError('Anunciante fora da sua carteira. Solicite o vínculo à OPEC.');
    }
    if(data.speakerId&&!await db().prepare("SELECT id FROM records WHERE id=? AND kind='speaker'").bind(data.speakerId).first())return Response.json({error:"Locutor não encontrado."},{status:400});
+   // Only the server copies saved template content; clients cannot forge clauses.
+   data.template=previous?.template;
+   if(body.templateSelection){
+    const selection=z.object({id:z.string().max(100),version:z.number().int().nonnegative()}).parse(body.templateSelection);
+    if(!selection.id)delete data.template;
+    else if(selection.id!==previous?.template?.id||selection.version!==previous?.template?.version){
+     const model:any=await db().prepare("SELECT data FROM records WHERE id=? AND kind='template'").bind(selection.id).first();
+     if(!model)throw new BusinessError('Modelo de contrato não encontrado.');
+     const template=templateSchema.parse(JSON.parse(model.data));
+     if(!template.active||template.version!==selection.version)throw new BusinessError('Modelo desativado ou atualizado. Atualize a página e selecione novamente.');
+     data.template=templateSnapshotSchema.parse(template);
+    }
+   }
    if(previous){
     data.stage=previous.stage||0;data.history=[...(previous.history||[])];data.delivered=previous.delivered||0;data.paid=previous.paid||false;data.snapshot=previous.snapshot;data.creatorId=previous.creatorId||'';data.workflowVersion=previous.workflowVersion||0;
     const prior=contractSchema.parse(previous);

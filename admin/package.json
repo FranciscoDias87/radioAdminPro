@@ -6,7 +6,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "test": "node --test lib/domain.test.mjs lib/signing.test.mjs lib/report-pdf.test.mjs lib/report-filters.test.mjs scripts/verify-backup.test.mjs",
+    "test": "node --test lib/domain.test.mjs lib/client-identity.test.mjs lib/signing.test.mjs lib/report-pdf.test.mjs lib/report-filters.test.mjs scripts/verify-backup.test.mjs",
     "typecheck": "tsc --noEmit",
     "install:ci": "node scripts/install-ci.mjs",
     "dev": "node scripts/run-framework.mjs dev",

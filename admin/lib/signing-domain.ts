@@ -1,5 +1,7 @@
 import {BusinessError,type Contract,type Client,type Speaker,type Station,type Billing} from "./domain.ts";
 import {sha256} from "./signing-crypto.ts";
+import {clientSigner,validateClientIdentity} from "./client-identity.ts";
+export {validCpf} from "./identifiers.ts";
 export type SignerRole="client"|"speaker";
 export type Evidence={id:string;hash:string;versionHash:string;documentHash:string;role:SignerRole;name:string;document:string;phone:string;date:string;ip:string;userAgent:string;method:string;consent:string};
 export type ContractVersion={id:string;contractId:string;number:number;createdAt:string;createdBy:string;payload:{contract:Contract;client:Client;speaker:Speaker;station:Station;installments:{number:number;due:string;amountCents:number}[]};hash:string;documentHash:string;pdf:string;signatures:Evidence[];state:"client"|"speaker"|"opec"|"completed"|"superseded"|"cancelled";finalPdf?:string;finalHash?:string;approvedBy?:string;approvedAt?:string};
@@ -8,11 +10,6 @@ export function phoneNumber(value:string){
  const n=value.replace(/\D/g,"");const phone=n.length===10||n.length===11?"55"+n:n;
  if(!/^55[1-9]\d{9,10}$/.test(phone))throw new BusinessError("Cadastre um WhatsApp brasileiro válido com DDD para os dois signatários.");
  return phone;
-}
-export function validCpf(value:string){
- const n=value.replace(/\D/g,"");if(!/^\d{11}$/.test(n)||/^(\d)\1{10}$/.test(n))return false;
- for(let length=9;length<=10;length++){let sum=0;for(let i=0;i<length;i++)sum+=Number(n[i])*(length+1-i);const digit=(sum*10)%11; if(Number(n[length])!==(digit===10?0:digit))return false;}
- return true;
 }
 export const consentText="Li integralmente esta versão do contrato e concordo com suas condições. Confirmo meu aceite eletrônico e, quando aplicável, minha autorização para representar a parte contratante.";
 export function checkInvite(c:Contract,v:ContractVersion,i:Invite,now=Date.now(),allowUsed=false){
@@ -39,7 +36,8 @@ export function canFinalize(c:Contract,v:ContractVersion){
  if(c.stage!==4||c.workflowVersion!==v.number||v.state!=="opec"||v.signatures.length!==2||!v.signatures.some(s=>s.role==="client")||!v.signatures.some(s=>s.role==="speaker"))throw new BusinessError("As duas assinaturas da mesma versão são obrigatórias antes da confirmação final.");
 }
 export function versionPayload(c:Contract,client:Client,speaker:Speaker,station:Station,billing:Billing){
- phoneNumber(client.phone);phoneNumber(speaker.phone);
+ validateClientIdentity(client);
+ phoneNumber(clientSigner(client).phone);phoneNumber(speaker.phone);
  if(!client.document.trim()||!client.contact.trim())throw new BusinessError("Informe documento do anunciante e nome do responsável antes de enviar para assinatura.");
  if(!speaker.active)throw new BusinessError("Locutor/agente inativo.");
  if(!station.document.trim())throw new BusinessError("Complete o CNPJ da emissora antes de enviar para assinatura.");
