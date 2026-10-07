@@ -13,7 +13,9 @@ test('Locutor: CPF, WhatsApp e endereço estruturado, com leitura legada',()=>{
  const speaker=speakerSchema.parse({id:'speaker',name:' Locutor completo ',document:'529.982.247-25',phone:'(11) 99999-5678',email:'locutor@example.com',active:false,addressFields:{postalCode:'64460-000',street:'Rua de teste',number:'S/N',complement:'',neighborhood:'Centro',city:'Água Branca',state:'PI'}});
  assert.doesNotThrow(()=>validateSpeakerIdentity(speaker));assert.equal(speaker.name,'Locutor completo');assert.equal(speaker.addressFields.postalCode,'64460000');assert.equal(speaker.active,false);
  for(const invalid of [{document:''},{document:'11111111111'},{phone:'123'},{addressFields:undefined}])assert.throws(()=>validateSpeakerIdentity({...speaker,...invalid}));
- assert.doesNotThrow(()=>speakerSchema.parse({id:'legacy',name:'Locutor antigo'}));
+ assert.equal(speakerSchema.parse({id:'legacy',name:'Locutor antigo'}).stageName,undefined);
+ assert.equal(speakerSchema.parse({...speaker,stageName:' Voz da rádio '}).stageName,'Voz da rádio');
+ assert.throws(()=>speakerSchema.parse({...speaker,stageName:'x'.repeat(151)}));
  assert.throws(()=>speakerSchema.parse({...speaker,email:'invalido'}));
 });
 test('Endereço estruturado preserva campos, CEP e texto legado',()=>{

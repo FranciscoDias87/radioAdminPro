@@ -30,7 +30,8 @@ test('Fluxo completo isolado: perfis, versão, cliente, locutor, OPEC e PDF',asy
  assert.equal((await read(speaker.id)).document,speaker.document);
  for(const invalid of [{document:'11111111111'},{addressFields:undefined},{phone:'123'},{addressFields:{...speaker.addressFields,state:'XX'}}])assert.equal((await request('/api/records',{kind:'speaker',data:{...speaker,...invalid,id:crypto.randomUUID()}})).status,400);
  const savedSpeaker=await read(speaker.id);
- assert.equal((await request('/api/records',{kind:'speaker',data:{...savedSpeaker,addressFields:{...savedSpeaker.addressFields,complement:'Estúdio 2'}},previous:JSON.stringify(savedSpeaker)})).status,200);
+ assert.equal((await request('/api/records',{kind:'speaker',data:{...savedSpeaker,stageName:' Voz da rádio ',addressFields:{...savedSpeaker.addressFields,complement:'Estúdio 2'}},previous:JSON.stringify(savedSpeaker)})).status,200);
+ assert.equal((await read(speaker.id)).stageName,'Voz da rádio');
  assert.equal((await read(speaker.id)).addressFields.complement,'Estúdio 2');
  for(const [id,role] of [['opec','opec'],['agent','agent'],['finance','finance']])assert.equal((await request('/api/operators',{id,label:id,role,speakerId:speaker.id,active:true})).status,200);
  assert.equal((await request('/api/records',{kind:'client',data:{...client,creatorId:'forged'}},'agent')).status,200);
