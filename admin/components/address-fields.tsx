@@ -1,10 +1,10 @@
 "use client";
 import {Select,SelectTrigger,SelectValue,SelectContent,SelectItem} from "@/components/ui/select";
 import {brazilStates,type Client} from "@/lib/domain";
-export function AddressFields({data}:{data?:Client}){
+export function AddressFields({data,label="Endereço do anunciante"}:{data?:Pick<Client,"address"|"addressFields">;label?:string}){
  const a=data?.addressFields;
  return <fieldset className="template-signers">
-  <legend>Endereço do anunciante</legend>
+  <legend>{label}</legend>
   {!a&&data?.address&&<p className="pro-note">Endereço anterior: {data.address}</p>}
   <div className="pro-form-grid"><label>CEP<input name="postalCode" defaultValue={a?.postalCode} inputMode="numeric" autoComplete="postal-code" placeholder="00000-000" pattern="[0-9]{5}-?[0-9]{3}" maxLength={9} required/></label><label>UF<Select name="state" defaultValue={a?.state} required><SelectTrigger aria-label="UF"><SelectValue placeholder="Selecione"/></SelectTrigger><SelectContent>{brazilStates.map(state=><SelectItem value={state} key={state}>{state}</SelectItem>)}</SelectContent></Select></label></div>
   <label>Logradouro<input name="street" defaultValue={a?.street} autoComplete="address-line1" placeholder="Rua, avenida, praça..." minLength={2} maxLength={150} required/></label>

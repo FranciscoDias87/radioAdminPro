@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import {z} from "zod";
 import {clientSchema,speakerSchema,contractSchema,expenseSchema,stationSchema,templateSchema,templateSnapshotSchema,makeBilling,validateContractEdit,BusinessError} from "@/lib/domain";
 import {validateClientIdentity} from "@/lib/client-identity";
+import {validateSpeakerIdentity} from "@/lib/speaker-identity";
 import {actorOf,checkOrigin,apiError,auditStatement} from "@/lib/api-security";
 import {operatorOf,checkContractAccess} from "@/lib/operators";
 function db(){if(!env.DB)throw Error("Banco indisponível");return env.DB;}
@@ -31,6 +32,7 @@ export async function POST(request:Request){
     if(linked)throw new BusinessError('Anunciante compartilhado ou em conferência. Solicite alteração à OPEC.');
    }
   }
+  if(body.kind==='speaker')validateSpeakerIdentity(data);
   if(body.kind==='template'){data.version=(previous?.version||0)+1;data.updatedAt=new Date().toISOString();}
   if(body.kind==="contract"){
    if(previous)checkContractAccess(actor,contractSchema.parse(previous));

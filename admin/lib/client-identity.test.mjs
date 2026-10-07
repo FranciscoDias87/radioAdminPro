@@ -1,12 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validCpf,validCnpj} from './identifiers.ts';
-import {clientSchema,addressSchema,contractSchema,validateContractEdit} from './domain.ts';
+import {clientSchema,speakerSchema,addressSchema,contractSchema,validateContractEdit} from './domain.ts';
+import {validateSpeakerIdentity} from './speaker-identity.ts';
 import {clientSigner,personType,validateClientIdentity,formatAddress} from './client-identity.ts';
 import {contractPdf} from './contract-pdf.ts';
 import {PDFDocument} from 'pdf-lib';
 
 const company=clientSchema.parse({id:'client',name:'Empresa de teste',personType:'PJ',document:'11.222.333/0001-81',contact:'Representante',representativeCpf:'529.982.247-25',representativePhone:'11999991234',phone:'11988888888',email:'',address:'Rua de teste, 10, Centro, Água Branca - PI'});
+
+test('Locutor: CPF, WhatsApp e endereço estruturado, com leitura legada',()=>{
+ const speaker=speakerSchema.parse({id:'speaker',name:' Locutor completo ',document:'529.982.247-25',phone:'(11) 99999-5678',email:'locutor@example.com',active:false,addressFields:{postalCode:'64460-000',street:'Rua de teste',number:'S/N',complement:'',neighborhood:'Centro',city:'Água Branca',state:'PI'}});
+ assert.doesNotThrow(()=>validateSpeakerIdentity(speaker));assert.equal(speaker.name,'Locutor completo');assert.equal(speaker.addressFields.postalCode,'64460000');assert.equal(speaker.active,false);
+ for(const invalid of [{document:''},{document:'11111111111'},{phone:'123'},{addressFields:undefined}])assert.throws(()=>validateSpeakerIdentity({...speaker,...invalid}));
+ assert.doesNotThrow(()=>speakerSchema.parse({id:'legacy',name:'Locutor antigo'}));
+ assert.throws(()=>speakerSchema.parse({...speaker,email:'invalido'}));
+});
 test('Endereço estruturado preserva campos, CEP e texto legado',()=>{
  const fields={postalCode:'64460-000',street:' Rua de teste ',number:'S/N',complement:'Sala 2',neighborhood:'Centro',city:'Água Branca',state:'PI'};
  const addressFields=addressSchema.parse(fields);assert.equal(addressFields.postalCode,'64460000');assert.equal(addressFields.street,'Rua de teste');assert.equal(addressFields.number,'S/N');

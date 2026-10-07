@@ -19,7 +19,7 @@ export const clientSchema = z.object({ id, name: short.min(2), document: z.strin
 const templateContent={name:short.trim().min(2),clauses:z.string().trim().min(20).max(30000),clientSignatureLabel:short.trim().min(2),speakerSignatureLabel:short.trim().min(2),opecSignatureLabel:short.trim().min(2)};
 export const templateSchema=z.object({id,...templateContent,active:z.boolean().default(true),version:z.number().int().positive().default(1),updatedAt:z.string().optional()});
 export const templateSnapshotSchema=z.object({id,...templateContent,version:z.number().int().positive()});
-export const speakerSchema = z.object({ id, name: short.min(2), email: z.union([z.literal(""), z.string().email()]).default(""), phone: z.string().max(40).default(""), active: z.boolean().default(true) });
+export const speakerSchema = z.object({ id, name: short.trim().min(2), document:z.string().trim().max(20).optional(), addressFields:addressSchema.optional(), email: z.union([z.literal(""), z.string().email()]).default(""), phone: z.string().max(40).default(""), active: z.boolean().default(true) });
 export const contractSchema = z.object({
   id, clientId: id, title: short.min(2), start: day, end: day,
   amount: z.number().positive().max(10000000).refine(n => Math.abs(n * 100 - Math.round(n * 100)) < 0.000001),
