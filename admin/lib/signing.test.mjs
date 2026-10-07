@@ -45,6 +45,7 @@ test('Fluxo completo isolado: perfis, versão, cliente, locutor, OPEC e PDF',asy
  assert.equal((await request('/api/records',{kind:'template',data:template},'agent')).status,400);
  assert.equal((await request('/api/records',{kind:'template',data:{...template,version:99}})).status,200);
  assert.equal((await read(template.id)).version,1);
+ assert.equal((await request('/api/records',{kind:'template',data:{...template,id:'invalid-template',clauses:'Condição com {{campo.inexistente}}.'}})).status,400);
  assert.equal((await request('/api/records',{kind:'client',data:{...other,id:'invalid-company',representativeCpf:'11111111111'}})).status,400);
  assert.equal((await request('/api/records',{kind:'client',data:{...other,id:'invalid-type',personType:'PF'}})).status,400);
  const ownRows=await request('/api/records',undefined,'agent');assert.ok(!ownRows.body.some(r=>r.data.id===other.id));

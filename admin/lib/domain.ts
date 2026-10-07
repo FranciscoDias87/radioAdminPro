@@ -16,7 +16,7 @@ export const addressSchema=z.object({
  city:z.string().trim().min(2).max(100),state:z.enum(brazilStates)
 });
 export const clientSchema = z.object({ id, name: short.min(2), document: z.string().max(50).default(""), contact: short.default(""), email: z.union([z.literal(""), z.string().email()]).default(""), phone: z.string().max(40).default(""), creatorId:z.string().default(""), personType:z.enum(["PF","PJ"]).optional(), representativeCpf:z.string().max(20).optional(), representativePhone:z.string().max(40).optional(), address:z.string().max(500).optional(),addressFields:addressSchema.optional() });
-const templateContent={name:short.trim().min(2),clauses:z.string().trim().min(20).max(30000),clientSignatureLabel:short.trim().min(2),speakerSignatureLabel:short.trim().min(2),opecSignatureLabel:short.trim().min(2)};
+const templateContent={name:short.trim().min(2),clauses:z.string().trim().min(20).max(30000),documentMode:z.enum(["clauses","complete"]).optional(),clientSignatureLabel:short.trim().min(2),speakerSignatureLabel:short.trim().min(2),opecSignatureLabel:short.trim().min(2)};
 export const templateSchema=z.object({id,...templateContent,active:z.boolean().default(true),version:z.number().int().positive().default(1),updatedAt:z.string().optional()});
 export const templateSnapshotSchema=z.object({id,...templateContent,version:z.number().int().positive()});
 export const speakerSchema = z.object({ id, name: short.trim().min(2), stageName:short.trim().optional(), document:z.string().trim().max(20).optional(), addressFields:addressSchema.optional(), email: z.union([z.literal(""), z.string().email()]).default(""), phone: z.string().max(40).default(""), active: z.boolean().default(true) });

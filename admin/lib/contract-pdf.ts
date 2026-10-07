@@ -8,25 +8,30 @@ export async function contractPdf(v:Pick<ContractVersion,"payload"|"number"|"cre
  const pdf=await PDFDocument.create();const font=await pdf.embedFont(StandardFonts.Helvetica),bold=await pdf.embedFont(StandardFonts.HelveticaBold);
  let page=pdf.addPage([595.28,841.89]),y=785;
  const line=(text:string,size=11,strong=false)=>{
+  if(strong&&y<110){page=pdf.addPage([595.28,841.89]);y=785;}
   const safe=text.replace(/[^\u0009\u000A\u000D\u0020-\u007E\u00A0-\u00FF]/g," ");
   const words=safe.split(/\s+/).flatMap(word=>{const parts:string[]=[];let part='';for(const char of word){if((strong?bold:font).widthOfTextAtSize(part+char,size)>475&&part){parts.push(part);part='';}part+=char;}if(part)parts.push(part);return parts;});let current="";
   for(const word of words){const next=current?current+" "+word:word;if((strong?bold:font).widthOfTextAtSize(next,size)>475&&current){draw(current);current=word;}else current=next;}
   if(current)draw(current);y-=5;
   function draw(value:string){if(y<65){page=pdf.addPage([595.28,841.89]);y=785;}page.drawText(value,{x:60,y,size,font:strong?bold:font,color:rgb(.1,.14,.16)});y-=size+6;}
  };
- const {contract:c,client,speaker,station,installments}=v.payload;
+ const {contract:c,client,speaker,station,installments}=v.payload,signer=clientSigner(client);
  line(station.name,18,true);line(`CNPJ: ${station.document} | ${station.address}`);
- line("CONTRATO DE VEICULAÇÃO PUBLICITÁRIA",14,true);line(`Referência: ${c.id} | Versão: ${v.number}`);line(`Emissão da versão: ${v.createdAt}`);
+ const complete=c.template?.documentMode==="complete";
+ if(!complete)line("CONTRATO DE VEICULAÇÃO PUBLICITÁRIA",14,true);line(`Referência: ${c.id} | Versão: ${v.number}`);line(`Emissão da versão: ${v.createdAt}`);
+ if(!complete){
  line("PARTES E RESPONSÁVEIS",12,true);line(`Anunciante (${personType(client)}): ${client.name} | CPF/CNPJ: ${client.document}`);line(`Endereço do anunciante: ${formatAddress(client)||"Não informado"}`);line(`WhatsApp: ${client.phone} | E-mail: ${client.email||"Não informado"}`);line(`Responsável pelo anunciante: ${client.contact}`);
- const signer=clientSigner(client);if(personType(client)==="PJ")line(`Representante: ${signer.name} | CPF: ${signer.document} | Telefone: ${signer.phone}`);
+ if(personType(client)==="PJ")line(`Representante: ${signer.name} | CPF: ${signer.document} | Telefone: ${signer.phone}`);
  line(`Locutor/agente: ${speaker.name}`);line(`Gestor: ${c.manager}`);
  line("CONDIÇÕES COMERCIAIS",12,true);line(`Campanha: ${c.title}`);line(`Vigência: ${c.start} a ${c.end} | Setor: ${c.sector}`);line(`Programa/faixa: ${c.program}`);line(`Inserções: ${c.spots} | Duração por inserção: ${c.duration} segundos`);line(`Valor contratado: ${money(Math.round(c.amount*100))}`);line(`Comissão do locutor/agente: ${c.commissionRate}% | Liberação proporcional aos recebimentos registrados.`);
  line("PARCELAS",12,true);for(const i of installments)line(`Parcela ${i.number}: ${money(i.amountCents)} | Vencimento: ${i.due}`);
- if(c.template){line(`MODELO: ${c.template.name} | Revisão ${c.template.version}`,12,true);for(const paragraph of c.template.clauses.split(/\r?\n/)){if(paragraph.trim())line(paragraph);else y-=8;}}
- line("CONDIÇÕES E OBSERVAÇÕES",12,true);line(c.notes||"Sem condições adicionais registradas nesta versão.");
+ }
+ if(c.template){line(`MODELO: ${c.template.name} | Revisão ${c.template.version}`,10,true);for(const paragraph of c.template.clauses.split(/\r?\n/)){const heading=paragraph.match(/^(#{1,3})\s+(.+)$/);if(heading)line(heading[2],heading[1].length===1?14:12,true);else if(paragraph.trim())line(paragraph.replace(/\*\*(.*?)\*\*/g,"$1"));else y-=8;}}
+ if(!complete||c.notes){line("CONDIÇÕES E OBSERVAÇÕES",12,true);line(c.notes||"Sem condições adicionais registradas nesta versão.");}
  line("SIGNATÁRIOS E CONFIRMAÇÃO",12,true);line(`${c.template?.clientSignatureLabel||"Cliente / representante"}: ${signer.name}`);line(`${c.template?.speakerSignatureLabel||"Locutor / agente"}: ${speaker.name}`);line(`${c.template?.opecSignatureLabel||"Confirmação final OPEC"}: responsável identificado na homologação.`);
  line("ACEITE ELETRÔNICO",12,true);line("O cliente e o locutor/agente devem confirmar esta mesma versão. A confirmação final pela OPEC somente ocorre após ambos os aceites. As evidências serão anexadas ao documento concluído.");
  line(`Hash SHA-256 dos dados da versão: ${v.hash}`,9);line("O hash verifica integridade e não constitui, isoladamente, verificação de identidade ou assinatura certificada ICP-Brasil.",9);
+ const pages=pdf.getPages();pages.forEach((p,index)=>p.drawText(`Página ${index+1} de ${pages.length}`,{x:475,y:35,size:9,font,color:rgb(.35,.4,.42)}));
  pdf.setTitle(`Contrato ${c.title} - versão ${v.number}`);pdf.setAuthor(station.name);pdf.setCreationDate(new Date(v.createdAt));pdf.setModificationDate(new Date(v.createdAt));
  return new Uint8Array(await pdf.save({useObjectStreams:false}));
 }

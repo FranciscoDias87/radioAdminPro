@@ -1,6 +1,7 @@
 import {BusinessError,type Contract,type Client,type Speaker,type Station,type Billing} from "./domain.ts";
 import {sha256} from "./signing-crypto.ts";
 import {clientSigner,validateClientIdentity} from "./client-identity.ts";
+import {renderContractTemplate} from "./contract-template-text.ts";
 export {validCpf} from "./identifiers.ts";
 export type SignerRole="client"|"speaker";
 export type Evidence={id:string;hash:string;versionHash:string;documentHash:string;role:SignerRole;name:string;document:string;phone:string;date:string;ip:string;userAgent:string;method:string;consent:string};
@@ -41,5 +42,7 @@ export function versionPayload(c:Contract,client:Client,speaker:Speaker,station:
  if(!client.document.trim()||!client.contact.trim())throw new BusinessError("Informe documento do anunciante e nome do responsável antes de enviar para assinatura.");
  if(!speaker.active)throw new BusinessError("Locutor/agente inativo.");
  if(!station.document.trim())throw new BusinessError("Complete o CNPJ da emissora antes de enviar para assinatura.");
- return {contract:{...c,history:[],snapshot:undefined},client:{...client},speaker:{...speaker},station:{...station},installments:billing.invoices.map(i=>({number:i.number,due:i.due,amountCents:i.amountCents}))};
+ const payload={contract:{...c,history:[],snapshot:undefined},client:{...client},speaker:{...speaker},station:{...station},installments:billing.invoices.map(i=>({number:i.number,due:i.due,amountCents:i.amountCents}))};
+ if(c.template)payload.contract.template={...c.template,clauses:renderContractTemplate(c.template.clauses,payload)};
+ return payload;
 }

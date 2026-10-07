@@ -6,6 +6,10 @@ import {validateSpeakerIdentity} from './speaker-identity.ts';
 import {clientSigner,personType,validateClientIdentity,formatAddress} from './client-identity.ts';
 import {contractPdf} from './contract-pdf.ts';
 import {PDFDocument} from 'pdf-lib';
+import {initialContractTemplate,renderContractTemplate,validateTemplateVariables} from './contract-template-text.ts';
+import {versionPayload} from './signing-domain.ts';
+import {makeBilling} from './domain.ts';
+import {mkdir,writeFile} from 'node:fs/promises';
 
 const company=clientSchema.parse({id:'client',name:'Empresa de teste',personType:'PJ',document:'11.222.333/0001-81',contact:'Representante',representativeCpf:'529.982.247-25',representativePhone:'11999991234',phone:'11988888888',email:'',address:'Rua de teste, 10, Centro, Água Branca - PI'});
 
@@ -38,4 +42,23 @@ test('Modelo copiado no contrato: bloqueio após envio e PDF multipágina',async
  assert.doesNotThrow(()=>validateContractEdit(contract,{...contract,template:{...template,version:2}}));assert.throws(()=>validateContractEdit({...contract,stage:1},{...contract,stage:1,template:{...template,version:2}}));
  const bytes=await contractPdf({number:1,createdAt:'2026-10-06T12:00:00Z',hash:'test-hash',payload:{contract,client:company,speaker:{id:'speaker',name:'Locutor',phone:'11999995678',email:'',active:true},station:{id:'station',name:'Rádio de teste',document:'11222333000181',address:'Endereço',dial:'89.1',phone:'',email:''},installments:[]}});
  const pdf=await PDFDocument.load(bytes);assert.ok(pdf.getPageCount()>3);assert.equal(pdf.getTitle(),'Contrato Teste - versão 1');
+});
+
+test('Minuta automática: dados reais, PF/PJ, bloqueios e versão congelada',async()=>{
+ const template={id:'template-auto',name:'Minuta comercial',version:1,documentMode:'complete',clauses:initialContractTemplate,clientSignatureLabel:'Contratante',speakerSignatureLabel:'Agente',opecSignatureLabel:'Homologação'};
+ const c=contractSchema.parse({id:'act-3',clientId:company.id,title:'Aniversário da Loja',start:'2026-08-22',end:'2026-10-25',amount:3400,spots:120,duration:30,program:'Programa da manhã',status:'Rascunho',sector:'Varejo',manager:'Maria Santos',template});
+ const speaker=speakerSchema.parse({id:'speaker',name:'Carlos Oliveira',stageName:'Carlos no ar',phone:'11999995678',active:true});
+ const station={id:'station',name:'Emissora de teste',document:'11222333000181',address:'Avenida de teste, 1000, São Paulo/SP',dial:'89.1 FM',phone:'',email:''};
+ const billing=makeBilling(c,2,'2026-08-22'),payload=versionPayload(c,company,speaker,station,billing),text=payload.contract.template.clauses;
+ assert.ok(text.includes(company.name));assert.ok(text.includes('22 de agosto de 2026'));assert.match(text,/3\.400,00/);assert.ok(text.includes('Carlos Oliveira'));assert.ok(text.includes('120'));assert.ok(text.includes('Parcela 2'));assert.ok(!text.includes('{{'));assert.equal(c.template.clauses,initialContractTemplate);
+ assert.equal(payload.contract.template.documentMode,'complete');
+ const pf={...company,personType:'PF',name:'Pessoa física',document:'52998224725'};
+ assert.equal(renderContractTemplate('{{representante.nome}} / {{representante.cpf}}',{...payload,client:pf}),'Pessoa física / 52998224725');
+ assert.equal(renderContractTemplate('{{locutor.apelido}}',payload),'Carlos no ar');
+ assert.throws(()=>validateTemplateVariables('{{campo.inexistente}}'));assert.throws(()=>validateTemplateVariables('{{contrato.valor}'));
+ assert.throws(()=>renderContractTemplate('{{contrato.gestor}}',{...payload,contract:{...c,manager:''}}));
+ assert.equal(renderContractTemplate('{{anunciante.nome}}',{...payload,client:{...company,name:'{{contrato.valor}}'}}),'{{contrato.valor}}');
+ const changed=versionPayload(c,{...company,name:'Empresa alterada'},speaker,station,billing);assert.notEqual(changed.contract.template.clauses,text);assert.equal(payload.contract.template.clauses,text);
+ const bytes=await contractPdf({payload,number:1,createdAt:'2026-10-07T12:00:00Z',hash:'test-hash'});assert.ok((await PDFDocument.load(bytes)).getPageCount()>=2);
+ await mkdir('work/qa',{recursive:true});await writeFile('work/qa/contract-template-auto.pdf',bytes);
 });
