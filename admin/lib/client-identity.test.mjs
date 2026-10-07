@@ -10,6 +10,7 @@ import {initialContractTemplate,renderContractTemplate,validateTemplateVariables
 import {versionPayload} from './signing-domain.ts';
 import {makeBilling} from './domain.ts';
 import {mkdir,writeFile} from 'node:fs/promises';
+import {contractDraftPreview} from './contract-draft-preview.ts';
 
 const company=clientSchema.parse({id:'client',name:'Empresa de teste',personType:'PJ',document:'11.222.333/0001-81',contact:'Representante',representativeCpf:'529.982.247-25',representativePhone:'11999991234',phone:'11988888888',email:'',address:'Rua de teste, 10, Centro, Água Branca - PI'});
 
@@ -61,4 +62,25 @@ test('Minuta automática: dados reais, PF/PJ, bloqueios e versão congelada',asy
  const changed=versionPayload(c,{...company,name:'Empresa alterada'},speaker,station,billing);assert.notEqual(changed.contract.template.clauses,text);assert.equal(payload.contract.template.clauses,text);
  const bytes=await contractPdf({payload,number:1,createdAt:'2026-10-07T12:00:00Z',hash:'test-hash'});assert.ok((await PDFDocument.load(bytes)).getPageCount()>=2);
  await mkdir('work/qa',{recursive:true});await writeFile('work/qa/contract-template-auto.pdf',bytes);
+});
+
+test('Prévia de rascunho usa formulário atual, representante e parcelas sem salvar',()=>{
+ const speaker=speakerSchema.parse({id:'speaker',name:'Locutor de teste',phone:'11999995678'}),station={id:'station',name:'Emissora',document:'11222333000181',address:'Rua de teste, 10',dial:'89.1 FM',phone:'',email:''};
+ const template={clauses:initialContractTemplate};
+ const fields={clientId:company.id,speakerId:speaker.id,title:'Campanha digitada',sector:'Varejo',manager:'Gestor',start:'2026-10-01',end:'2026-10-31',amount:'100.01',spots:'20',duration:'30',program:'Programa',commissionRate:'30',count:'3',first:'2026-10-10',notes:'Observação digitada'};
+ const context={clients:[company],speakers:[speaker],station};
+ const draft=contractDraftPreview(fields,context,template);assert.deepEqual(draft.missing,[]);assert.deepEqual(draft.notices,[]);assert.ok(draft.text.includes('Campanha digitada'));assert.ok(draft.text.includes('A definir ao salvar'));assert.ok(draft.text.includes('33,34'));assert.ok(draft.text.includes('33,33'));assert.equal(draft.clientName,company.contact);assert.equal(draft.notes,fields.notes);
+ const changed=contractDraftPreview({...fields,title:'Campanha corrigida',amount:'200.01'},context,template);assert.ok(changed.text.includes('Campanha corrigida'));assert.ok(changed.text.includes('200,01'));assert.ok(draft.text.includes('100,01'));assert.equal(fields.title,'Campanha digitada');
+ const missing=contractDraftPreview({},context,template);assert.ok(missing.missing.includes('Nome / razão social'));assert.ok(missing.missing.includes('Valor global'));assert.ok(missing.missing.includes('Início da vigência'));assert.ok(missing.text.includes('[PENDENTE:'));assert.ok(!missing.text.includes('NaN'));assert.equal(missing.notices.length,1);
+ const invalid=contractDraftPreview({...fields,start:'2026-10-31',end:'2026-10-01',first:'2026-02-30'},context,template);assert.equal(invalid.notices.length,2);
+});
+
+test('Prévia de edição mantém vencimentos salvos e corresponde à minuta oficial',()=>{
+ const c=contractSchema.parse({id:'contract',clientId:company.id,speakerId:'speaker',title:'Campanha',start:'2026-10-01',end:'2026-10-31',amount:100.01,spots:20,duration:30,program:'Programa',status:'Rascunho',manager:'Gestor'});
+ const speaker=speakerSchema.parse({id:'speaker',name:'Locutor de teste',phone:'11999995678'}),station={id:'station',name:'Emissora',document:'11222333000181',address:'Rua de teste, 10',dial:'89.1 FM',phone:'',email:''};
+ const billing=makeBilling(c,3,'2026-10-10');billing.invoices[1].due='2026-11-15';
+ const fields=Object.fromEntries(Object.entries(c).map(([key,value])=>[key,String(value)])),template={clauses:initialContractTemplate},context={data:c,clients:[company],speakers:[speaker],station,billing};
+ const preview=contractDraftPreview(fields,context,template);
+ assert.equal(preview.text,renderContractTemplate(initialContractTemplate,versionPayload(c,company,speaker,station,billing)));
+ const changed=contractDraftPreview({...fields,amount:'120.01'},context,template);assert.ok(changed.text.includes('15 de novembro de 2026'));assert.ok(changed.text.includes('40,01'));assert.ok(changed.text.includes('40,00'));assert.equal(billing.invoices[0].amountCents,3334);
 });

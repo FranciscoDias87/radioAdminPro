@@ -6,6 +6,8 @@ import {Select,SelectTrigger,SelectValue,SelectContent,SelectItem} from "@/compo
 import {Table,TableHeader,TableBody,TableRow,TableHead,TableCell} from "@/components/ui/table";
 import type {Contract,ContractTemplate} from "@/lib/domain";
 import {initialContractTemplate,templateVariables} from "@/lib/contract-template-text";
+import {ContractDraftPreview} from "@/components/contract-draft-preview";
+import type {DraftPreviewContext} from "@/lib/contract-draft-preview";
 
 export function ContractTemplates({templates,canEdit,disabled,busy,onSave}:{templates:ContractTemplate[];canEdit:boolean;disabled:boolean;busy:boolean;onSave:(data:ContractTemplate,previous?:string)=>Promise<boolean>}){
  const [editor,setEditor]=useState<{data?:ContractTemplate}|null>(null);
@@ -32,7 +34,7 @@ export function ContractTemplates({templates,canEdit,disabled,busy,onSave}:{temp
  </section>;
 }
 
-export function ContractTemplateChoice({data,templates,locked}:{data?:Contract;templates:ContractTemplate[];locked:boolean}){
+export function ContractTemplateChoice({data,templates,locked,previewContext}:{data?:Contract;templates:ContractTemplate[];locked:boolean;previewContext?:DraftPreviewContext}){
  const [selection,setSelection]=useState({id:data?.template?.id||"none",version:data?.template?.version||0});
  const current=templates.find(t=>t.id===selection.id),copied=data?.template?.id===selection.id&&data.template.version===selection.version?data.template:current;
  const options=templates.filter(t=>t.active);
@@ -40,6 +42,7 @@ export function ContractTemplateChoice({data,templates,locked}:{data?:Contract;t
  return <div className="template-choice">
   <label>Modelo de contrato<Select value={selection.id} disabled={locked} onValueChange={id=>setSelection({id,version:templates.find(t=>t.id===id)?.version||0})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="none">Sem modelo: resumo comercial</SelectItem>{options.map(t=><SelectItem value={t.id} key={t.id}>{t.name} · revisão {t.id===selection.id?selection.version:t.version}</SelectItem>)}</SelectContent></Select></label>
   <input type="hidden" name="templateId" value={selection.id==="none"?"":selection.id}/><input type="hidden" name="templateVersion" value={selection.version}/>
+  {previewContext&&<ContractDraftPreview template={copied} context={previewContext}/>}
   {copied&&<><div className="template-revision"><span>Revisão vinculada: {selection.version}</span>{!locked&&current?.active&&current.version!==selection.version&&<button type="button" className="pro-outline compact" onClick={()=>setSelection({id:current.id,version:current.version})}><RefreshCw size={15}/>Usar revisão atual</button>}</div><details className="template-preview"><summary>Cláusulas e assinantes</summary><p>{copied.clauses}</p><dl><dt>Cliente / representante</dt><dd>{copied.clientSignatureLabel}</dd><dt>Locutor / agente</dt><dd>{copied.speakerSignatureLabel}</dd><dt>Homologação</dt><dd>{copied.opecSignatureLabel}</dd></dl></details></>}
  </div>;
 }

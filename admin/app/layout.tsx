@@ -6,6 +6,7 @@ import "./mobile.css";
 import "./theme-refinements.css";
 import "./contract-forms.css";
 import "./sidebar-refinements.css";
+import "./draft-preview.css";
 
 export const metadata: Metadata = {
   title: "Meio Norte FM | radioAdmin Pro",
