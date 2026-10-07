@@ -5,6 +5,7 @@ import {Miniflare} from 'miniflare';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {sha256,hmac,decryptToken,encryptToken,randomToken} from './signing-crypto.ts';
 import {checkInvite,validCpf,phoneNumber} from './signing-domain.ts';
+import {rehearseBackup} from '../scripts/rehearse-backup.mjs';
 const secret='isolated-test-secret-not-a-production-key';
 test('Tokens criptografados, CPF, telefone e expiração',async()=>{
  const token=randomToken();assert.equal(token.length,64);assert.equal(await decryptToken(secret,await encryptToken(secret,token)),token);
@@ -100,5 +101,8 @@ test('Fluxo completo isolado: perfis, versão, cliente, locutor, OPEC e PDF',asy
  const document=await mf.dispatchFetch('https://admin.example/api/workflow/document?versionId='+encodeURIComponent(final.id)+'&final=1',{headers:{'oai-authenticated-user-id':'owner','oai-authenticated-user-email':'owner@example.test'}});assert.equal(document.status,200);assert.equal(document.headers.get('content-type'),'application/pdf');
  await mf.setOptions({...options,bindings:{SIGNING_BRIDGE_SECRET:secret,SIGNING_ORIGIN:'https://signing.example'}});db=await mf.getD1Database('DB');
  const pending={...c,id:'pending-test',title:'Pending setup',status:'Rascunho',stage:0};assert.equal((await request('/api/records',{kind:'contract',data:pending,billing:{count:1,first:'2026-10-06'}},'agent')).status,200);let pc=await read(pending.id);await workflow('submit',pc,{},'agent');pc=await read(pc.id);assert.equal((await workflow('approve',pc,confirm,'opec')).status,200);pc=await read(pc.id);const pi=await invitation(pc,'client');assert.equal(pi.i.notification,'pending');assert.equal((await bridge('view',pi.token)).body.whatsappConfigured,false);assert.equal((await bridge('otp',pi.token)).status,400);assert.equal((await read('version:'+pc.id+':1')).signatures.length,0);
+ const exported=await db.prepare('SELECT id,kind,data FROM records ORDER BY id').all();
+ const backup={format:'radioadmin-backup',version:1,records:exported.results.map(row=>({...row,data:JSON.parse(row.data)}))};
+ const restored=await rehearseBackup(backup);assert.equal(restored.records,backup.records.length);assert.ok(restored.versions>=3);
  }finally{await mf.dispose();}
 });

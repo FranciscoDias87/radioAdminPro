@@ -36,10 +36,50 @@ A verificacao e somente leitura: detecta duplicatas, referencias ausentes
 e alteracao dos hashes de versoes, PDFs e evidencias. Ela nao autentica
 quem produziu o backup, nem restaura o banco.
 
+O ensaio abaixo valida, importa em D1 temporario sem persistencia, rele os
+registros e compara o conteudo. Nao recebe conexao com producao nem envia
+mensagens. O banco temporario e descartado ao concluir. Dependencias de
+desenvolvimento devem estar instaladas; o arquivo precisa permanecer protegido.
+
+```sh
+cd admin
+npm run backup:rehearse -- /caminho/backup.json
+```
+
+O CI executa esse ensaio com dados ficticios, incluindo versoes e assinaturas
+do fluxo isolado. Isso nao substitui um ensaio autorizado com backup real e
+segredos separados, nem comprova recuperacao do gateway, WhatsApp e hospedagem.
+Nunca usar backup real em CI publico. A validacao agora confere tambem tipos
+das referencias, vinculo entre convite e contrato, papeis dos assinantes e
+vinculo das evidencias aos hashes da versao e documento.
+
 Ainda nao existe restauracao automatica na aplicacao. A recuperacao exige
 um administrador da infraestrutura, banco de teste e validacao antes de
 substituir producao. Guardar tambem os segredos em cofre separado e testar
 a restauracao. Backup sem exercicio de recuperacao nao garante continuidade.
+
+## Rotina DevOps
+
+Trabalhar em alteracoes pequenas, com criterios de aceite definidos junto
+com comercial, OPEC e financeiro. Manter codigo, testes e roteiro da entrega
+no mesmo commit. Exigir os jobs aprovados para o commit que sera publicado.
+O GitHub verifica a qualidade; publicar no Sites continua sendo uma etapa
+controlada, nao um deploy automatico ativado por este workflow.
+
+Antes de liberar: registrar commit anterior, backup protegido verificado,
+responsavel e mudancas; executar testes, build e auditoria; conferir celular,
+teclado, tema escuro e fluxo com usuarios de teste. Apos liberar: confirmar
+status, acesso por perfil, PDF e consultas sem efetuar pagamentos reais.
+Em incidente: suspender gravacoes afetadas, preservar evidencias sem dados
+pessoais em logs, avaliar rollback de codigo e reconciliar transacoes com
+financeiro. Nunca repetir lancamento com resultado incerto sem consultar
+o historico. Registrar causa, correcao e teste preventivo sem atribuir culpa.
+
+Medir por entrega: tempo entre mudanca e publicacao, frequencia de entregas,
+percentual que exige correcao ou rollback, tempo de recuperacao e retrabalho
+nas conferencias. Ainda nao ha coleta automatizada desses indicadores.
+Definir com a emissora RPO/RTO, retencao, dono dos backups e horarios dos
+ensaios antes de assumir compromissos de continuidade.
 
 ## Regras desta atualizacao
 

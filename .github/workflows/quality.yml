@@ -26,9 +26,12 @@ jobs:
           cache: npm
           cache-dependency-path: admin/package-lock.json
       - run: npm run install:ci
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+      - name: Contratos de tipos
+        run: npm run typecheck
+      - name: Fluxos comerciais, financeiro e recuperacao isolada
+        run: npm test
+      - name: Compilacao de entrega
+        run: npm run build
       - name: Dependencias de producao
         run: npm audit --omit=dev --audit-level=high
   signing:
